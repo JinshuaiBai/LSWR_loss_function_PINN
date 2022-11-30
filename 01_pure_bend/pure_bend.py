@@ -1,7 +1,8 @@
 """
 
-    This code is for the pure bending beam problem in "A Noval Way to Formulate the Loss Function 
-    in Physics-Informed Neural Network for Solid Mechanics". DOI: 
+    This code is for the pure bending beam problem in "A physics-informed neural network technique 
+    based on a modified loss function for computational 2D and 3D solid mechanics". 
+    DOI: https://doi.org/10.1007/s00466-022-02252-0
     
     A pure bending beam is modeled here. The length and height of the beam are L = 1 m and H = 0.1 m. 
     The beam is bent by a moment M = 1/12 N∙m subjected on both sides of the beam. Due to the 
