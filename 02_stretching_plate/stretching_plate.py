@@ -1,7 +1,8 @@
 """
 
-    This code is for the stretching square plate problem in "A New Way to Formulate the Loss Function in 
-    Physics-Informed Neural Network for Computational Solid Mechanics".
+    This code is for the stretching square plate problem in "A physics-informed neural network 
+    technique based on a modified loss function for computational 2D and 3D solid mechanics".
+    DOI: https://doi.org/10.1007/s00466-022-02252-0
     
     A stretching square plate is modeled here. The length of the plate L = 2 m. The in-plain
     distribute force, F(y) = cos(pi*y/2) N/m^2, is applied on the left and right sides of the
