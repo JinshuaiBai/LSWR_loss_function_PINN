@@ -14,7 +14,7 @@ Information regarding the numerical examples, please refer to our paper.
  - SciPy       1.8.0
  
 # Paper link
-The paper will recently available online.
+https://doi.org/10.1007/s00466-022-02252-0
 
 # Cite as
 [1] J. Bai, T. Rabczuk, A. Gupta, L. Alzubaidi, Y. Gu, A Physics-Informed Neural Network technique based on a modified loss function for computational 2D and 3D solid mechanics, Computational Mechanics, (2022).
