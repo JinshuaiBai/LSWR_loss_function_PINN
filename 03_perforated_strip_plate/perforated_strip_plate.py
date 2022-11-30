@@ -1,8 +1,9 @@
 
 """
 
-    This code is for the perforated strip plate problem in "A New Way to Formulate the Loss Function 
-    in Physics-Informed Neural Network for Computational Solid Mechanics". 
+    This code is for the perforated strip plate problem in "A physics-informed neural network 
+    technique based on a modified loss function for computational 2D and 3D solid mechanics".
+    DOI: https://doi.org/10.1007/s00466-022-02252-0
     
     A perforated strip plate is modeled here. The length of the plate L = 2 m. A round hole is 
     in the middle of the plate. The radius of the round hole is r = 0.2 m. The in-plain distribute 
