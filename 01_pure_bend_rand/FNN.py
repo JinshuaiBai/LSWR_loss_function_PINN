@@ -38,7 +38,7 @@ def Net(n_input = 2, n_output = 1, layers = [20,20], acti_fun = 'tanh', k_init =
 
     =================================================================================================================================    
     """
-    x = tf.keras.layers.Input(shape=(n_input))
+    x = tf.keras.layers.Input(shape=(n_input,))
     temp = x
     for l in layers:
         temp = tf.keras.layers.Dense(l, activation=acti_fun, kernel_initializer=k_init)(temp)
