@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>一维波干涉演示课件</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --line: #64748b;
+      --text: #e5e7eb;
+      --accent: #38bdf8;
+      --accent2: #f472b6;
+      --sum: #22c55e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: linear-gradient(180deg, #020617, #0f172a);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 16px auto;
+      padding: 12px;
+      display: grid;
+      grid-template-rows: auto auto;
+      gap: 12px;
+    }
+
+    .canvas-wrap {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 420px;
+      display: block;
+      border-radius: 8px;
+      background: radial-gradient(circle at 50% 20%, #0b1220, #020617);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .panel {
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    h3 {
+      margin: 4px 0 10px;
+      font-size: 16px;
+      color: #cbd5e1;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 86px 1fr 58px;
+      align-items: center;
+      gap: 8px;
+      margin: 7px 0;
+      font-size: 13px;
+    }
+
+    input[type="range"] { width: 100%; }
+
+    .meta {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .buttons {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: white;
+      background: #2563eb;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    button.secondary { background: #475569; }
+    button.warn { background: #dc2626; }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      font-size: 12px;
+      color: #cbd5e1;
+      margin: 6px 4px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #94a3b8;
+    }
+
+    @media (max-width: 900px) {
+      .controls { grid-template-columns: 1fr; }
+      canvas { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="canvas-wrap">
+      <canvas id="waveCanvas" width="1060" height="420"></canvas>
+      <div class="legend">
+        <span><i class="dot" style="background:#38bdf8"></i>左源波（向右）</span>
+        <span><i class="dot" style="background:#f472b6"></i>右源波（向左）</span>
+        <span><i class="dot" style="background:#22c55e"></i>叠加结果</span>
+      </div>
+      <div class="hint">
+        说明：中间灰线为平衡位置。点越偏离灰线，表示位移越大。可通过“暂停/继续”冻结画面，配合讲解驻波、相消和相长。
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="panel" id="leftPanel">
+        <h3>左侧入射波（从左向右传播）</h3>
+      </div>
+      <div class="panel" id="rightPanel">
+        <h3>右侧入射波（从右向左传播）</h3>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('waveCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const N = 121;
+    const points = Array.from({ length: N }, (_, i) => i / (N - 1));
+
+    const state = {
+      running: true,
+      showLeft: true,
+      showRight: true,
+      showSum: true,
+      t: 0,
+      speedScale: 1,
+      left: {
+        A: 40,
+        f: 0.8,
+        lambda: 0.35,
+        v: 0.28,
+        phase: 0
+      },
+      right: {
+        A: 40,
+        f: 0.8,
+        lambda: 0.35,
+        v: 0.28,
+        phase: 0
+      }
+    };
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function addSlider(panel, config, target) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <label>${config.label}</label>
+        <input type="range" min="${config.min}" max="${config.max}" step="${config.step}" value="${target[config.key]}">
+        <span>${target[config.key]}</span>
+      `;
+      const input = row.querySelector('input');
+      const out = row.querySelector('span');
+      input.addEventListener('input', () => {
+        target[config.key] = parseFloat(input.value);
+        out.textContent = input.value;
+      });
+      panel.appendChild(row);
+    }
+
+    function addWavePanel(panelId, target) {
+      const panel = document.getElementById(panelId);
+      [
+        { key: 'A', label: '振幅A(px)', min: 0, max: 90, step: 1 },
+        { key: 'f', label: '频率f(Hz)', min: 0.1, max: 3, step: 0.05 },
+        { key: 'lambda', label: '波长λ', min: 0.1, max: 1.0, step: 0.01 },
+        { key: 'v', label: '波速v', min: 0.05, max: 0.8, step: 0.01 },
+        { key: 'phase', label: '初相φ(rad)', min: -3.14, max: 3.14, step: 0.01 }
+      ].forEach(cfg => addSlider(panel, cfg, target));
+    }
+
+    addWavePanel('leftPanel', state.left);
+    addWavePanel('rightPanel', state.right);
+
+    const leftPanel = document.getElementById('leftPanel');
+    const rightPanel = document.getElementById('rightPanel');
+
+    const globalMeta = document.createElement('div');
+    globalMeta.className = 'meta';
+    globalMeta.innerHTML = `
+      <label><input type="checkbox" id="showLeft" checked> 显示左源波</label>
+      <label><input type="checkbox" id="showRight" checked> 显示右源波</label>
+      <label><input type="checkbox" id="showSum" checked> 显示叠加波</label>
+      <label>时间倍率 <input id="speedScale" type="range" min="0.2" max="2.0" step="0.1" value="1"> <span id="speedText">1.0</span>x</label>
+    `;
+
+    const buttons = document.createElement('div');
+    buttons.className = 'buttons';
+    buttons.innerHTML = `
+      <button id="toggleRun">暂停</button>
+      <button class="secondary" id="resetBtn">重置参数</button>
+      <button class="warn" id="phaseShift">右波相位+π</button>
+    `;
+
+    leftPanel.appendChild(globalMeta);
+    leftPanel.appendChild(buttons);
+
+    document.getElementById('showLeft').addEventListener('change', (e) => state.showLeft = e.target.checked);
+    document.getElementById('showRight').addEventListener('change', (e) => state.showRight = e.target.checked);
+    document.getElementById('showSum').addEventListener('change', (e) => state.showSum = e.target.checked);
+
+    const speedScale = document.getElementById('speedScale');
+    const speedText = document.getElementById('speedText');
+    speedScale.addEventListener('input', () => {
+      state.speedScale = parseFloat(speedScale.value);
+      speedText.textContent = state.speedScale.toFixed(1);
+    });
+
+    document.getElementById('toggleRun').addEventListener('click', (e) => {
+      state.running = !state.running;
+      e.target.textContent = state.running ? '暂停' : '继续';
+    });
+
+    document.getElementById('phaseShift').addEventListener('click', () => {
+      state.right.phase += Math.PI;
+      state.right.phase = ((state.right.phase + Math.PI) % (2 * Math.PI)) - Math.PI;
+      syncPanelValues(rightPanel, state.right);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      Object.assign(state.left, { A: 40, f: 0.8, lambda: 0.35, v: 0.28, phase: 0 });
+      Object.assign(state.right, { A: 40, f: 0.8, lambda: 0.35, v: 0.28, phase: 0 });
+      state.speedScale = 1;
+      speedScale.value = '1';
+      speedText.textContent = '1.0';
+      syncPanelValues(leftPanel, state.left);
+      syncPanelValues(rightPanel, state.right);
+    });
+
+    function syncPanelValues(panel, target) {
+      const inputs = panel.querySelectorAll('.row input');
+      inputs.forEach(input => {
+        const key = input.parentElement.querySelector('label').textContent;
+        let val = null;
+        if (key.includes('振幅')) val = target.A;
+        if (key.includes('频率')) val = target.f;
+        if (key.includes('波长')) val = target.lambda;
+        if (key.includes('波速')) val = target.v;
+        if (key.includes('初相')) val = target.phase;
+        if (val !== null) {
+          const clipped = clamp(val, parseFloat(input.min), parseFloat(input.max));
+          input.value = clipped;
+          input.parentElement.querySelector('span').textContent = Number(clipped).toFixed(2).replace(/\.00$/, '');
+        }
+      });
+    }
+
+    function waveLeft(x, t) {
+      const { A, f, lambda, v, phase } = state.left;
+      const k = 2 * Math.PI / Math.max(lambda, 1e-5);
+      const w = 2 * Math.PI * f;
+      return A * Math.sin(w * t - k * x + phase + 2 * Math.PI * (v - f * lambda) * t);
+    }
+
+    function waveRight(x, t) {
+      const { A, f, lambda, v, phase } = state.right;
+      const k = 2 * Math.PI / Math.max(lambda, 1e-5);
+      const w = 2 * Math.PI * f;
+      return A * Math.sin(w * t + k * x + phase + 2 * Math.PI * (v - f * lambda) * t);
+    }
+
+    let last = performance.now();
+
+    function draw(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+      if (state.running) {
+        state.t += dt * state.speedScale;
+      }
+
+      const W = canvas.width;
+      const H = canvas.height;
+      const y0 = H * 0.5;
+
+      ctx.clearRect(0, 0, W, H);
+
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(40, y0);
+      ctx.lineTo(W - 40, y0);
+      ctx.stroke();
+
+      const xpix = points.map(p => 40 + p * (W - 80));
+
+      const yL = points.map((p) => waveLeft(p, state.t));
+      const yR = points.map((p) => waveRight(1 - p, state.t));
+      const yS = points.map((_, i) => yL[i] + yR[i]);
+
+      function drawWave(values, color, radius) {
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        for (let i = 0; i < values.length; i++) {
+          const yy = y0 - values[i];
+          if (i === 0) ctx.moveTo(xpix[i], yy);
+          else ctx.lineTo(xpix[i], yy);
+        }
+        ctx.stroke();
+
+        for (let i = 0; i < values.length; i++) {
+          const yy = y0 - values[i];
+          ctx.beginPath();
+          ctx.arc(xpix[i], yy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      if (state.showLeft) drawWave(yL, '#38bdf8', 2.2);
+      if (state.showRight) drawWave(yR, '#f472b6', 2.2);
+      if (state.showSum) drawWave(yS, '#22c55e', 2.7);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '13px Microsoft YaHei';
+      ctx.fillText(`t = ${state.t.toFixed(2)} s`, 48, 26);
+      ctx.fillText('左波: y1 = A sin(ωt - kx + φ)', 48, 46);
+      ctx.fillText('右波: y2 = A sin(ωt + kx + φ)', 48, 64);
+      ctx.fillText('总位移: y = y1 + y2', 48, 82);
+
+      requestAnimationFrame(draw);
+    }
+
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
